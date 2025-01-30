@@ -38,13 +38,13 @@ def display_boxplot_with_stats(dataframe, column_name):
 
     # Médiane (au-dessous)
     plt.annotate(f'Médiane: {median:.2f}', 
-                 xy=(0.5, median - 0.05), xycoords='data',  # Légèrement en dessous de la ligne
+                 xy=(0.85, median), xycoords='data',  # Légèrement en dessous de la ligne
                  bbox=dict(boxstyle="round,pad=0.3", edgecolor='blue', facecolor='white'),
                  color='blue', fontsize=10, ha='center')
 
     # Écart-type (à droite)
     plt.annotate(f'Écart-type: {std:.2f}', 
-                 xy=(1.05, mean + std), xycoords='data',  # À droite de la ligne
+                 xy=(1.15, mean + std), xycoords='data',  # À droite de la ligne
                  bbox=dict(boxstyle="round,pad=0.3", edgecolor='green', facecolor='white'),
                  color='green', fontsize=10, ha='left')
 
@@ -61,44 +61,94 @@ def display_boxplot_with_stats(dataframe, column_name):
     # Afficher le graphique
     plt.show()
 
-
 def tableOfData(dataTree, effectifs, modalites, variable):
+    """
+    Crée un tableau de fréquences détaillé pour une variable donnée.
+
+    Paramètres :
+    - dataTree : DataFrame contenant les données initiales.
+    - effectifs : Série Pandas contenant les fréquences relatives des valeurs uniques de la variable.
+    - modalites : Index contenant les valeurs uniques (modalités) de la variable.
+    - variable : Nom de la colonne analysée (chaîne de caractères).
+
+    Retourne :
+    - Un DataFrame avec trois colonnes :
+        - [variable] : Les modalités uniques de la variable étudiée.
+        - "n" : Les effectifs (fréquences relatives) de chaque modalité.
+        - "f" : La fréquence relative ajustée en fonction du nombre total d'observations.
+    """
+
+    # Création d'un DataFrame avec les valeurs uniques de la variable
     idv = pd.DataFrame(modalites, columns=[variable])
+
+    # Ajout de la colonne "n" contenant les fréquences relatives issues de `effectifs`
     idv["n"] = effectifs.values
+
+    # Calcul de la fréquence relative "f" en divisant chaque effectif par la taille du DataFrame
     idv["f"] = idv["n"] / len(dataTree)
-    # type_emplacement["F"] = type_emplacement["f"].cumsum()
+
+    # La ligne suivante est commentée, mais elle pourrait être utilisée pour calculer la fréquence cumulée.
+    # idv["F"] = idv["f"].cumsum()
 
     return idv
 
 def barChartTree(dataframe, x_column, y_column, 
-                   title="Bar Chart", xlabel=None, ylabel=None, 
-                   rotation=90, grid=True, figsize=(12, 6), top_n=None):
-    # Optionnel : Filtrer pour ne conserver que les top_n valeurs les plus fréquentes
+                 title="Bar Chart", xlabel=None, ylabel=None, 
+                 rotation=90, grid=True, figsize=(12, 6), top_n=None):
+    """
+    Génère un diagramme en barres à partir d'un DataFrame.
+
+    Paramètres :
+    - dataframe : DataFrame contenant les données à représenter.
+    - x_column : Nom de la colonne pour l'axe des X (catégories).
+    - y_column : Nom de la colonne pour l'axe des Y (valeurs à afficher).
+    - title : (optionnel) Titre du graphique (par défaut "Bar Chart").
+    - xlabel : (optionnel) Nom personnalisé de l'axe des X (par défaut, nom de `x_column`).
+    - ylabel : (optionnel) Nom personnalisé de l'axe des Y (par défaut, nom de `y_column`).
+    - rotation : (optionnel) Angle de rotation des étiquettes de l'axe X (90° par défaut).
+    - grid : (optionnel) Afficher une grille horizontale si True (activé par défaut).
+    - figsize : (optionnel) Taille de la figure (12x6 par défaut).
+    - top_n : (optionnel) Nombre maximum de catégories à afficher (les `top_n` plus grandes valeurs selon `y_column`).
+
+    Retour :
+    - Affiche un graphique en barres avec les options spécifiées.
+    """
+
+    # Optionnel : Filtrer pour ne conserver que les `top_n` valeurs les plus élevées de `y_column`
     if top_n:
         dataframe = dataframe.nlargest(top_n, y_column)
-    # Créer le graphique
+
+    # Créer une nouvelle figure avec la taille spécifiée
     plt.figure(figsize=figsize)
+
+    # Tracer le diagramme en barres
     plt.bar(dataframe[x_column], dataframe[y_column])
 
-    # Ajouter des titres et étiquettes
+    # Ajouter un titre au graphique
     plt.title(title)
+
+    # Ajouter un libellé à l'axe des X (utilise `xlabel` si fourni, sinon `x_column`)
     plt.xlabel(xlabel if xlabel else x_column)
+
+    # Ajouter un libellé à l'axe des Y (utilise `ylabel` si fourni, sinon `y_column`)
     plt.ylabel(ylabel if ylabel else y_column)
 
-    # Rotation des étiquettes de l'axe des X
+    # Rotation des étiquettes de l'axe X pour améliorer la lisibilité
     plt.xticks(rotation=rotation, ha='right')
 
-    # Ajouter une grille
+    # Ajouter une grille horizontale si `grid` est activé
     if grid:
         plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Ajuster la mise en page et afficher
+    # Ajuster automatiquement la mise en page pour éviter le chevauchement des éléments
     plt.tight_layout()
+
+    # Afficher le graphique
     plt.show()
 
 def detect_outliers(data, method="iqr", threshold=1.5, column_name=None):
     """
-    Identifie les outliers pour une colonne spécifique ou toutes les variables quantitatives d'un DataFrame.
+    Identifie les outliers pour une ou plusieurs colonnes spécifiques ou toutes les variables quantitatives d'un DataFrame.
 
     Arguments :
     - data : pd.DataFrame : Le DataFrame contenant les données.
@@ -106,22 +156,27 @@ def detect_outliers(data, method="iqr", threshold=1.5, column_name=None):
     - threshold : float : Seuil pour identifier les outliers. 
         - Pour "iqr", c'est 1.5 par défaut.
         - Pour "zscore", c'est 3 par défaut.
-    - column_name : str ou None : Le nom de la colonne à analyser. Si None, toutes les colonnes quantitatives sont analysées.
+    - column_name : str, list ou None : Le(s) nom(s) de colonne(s) à analyser. Si None, toutes les colonnes quantitatives sont analysées.
     
     Retourne :
     - Un dictionnaire où les clés sont les noms des colonnes et les valeurs sont les indices des outliers.
     """
     if method not in ["iqr", "zscore"]:
         raise ValueError("La méthode doit être 'iqr' ou 'zscore'.")
-    
+
     if column_name:
-        # Vérifier que la colonne est présente dans le DataFrame
-        if column_name not in data.columns:
-            raise ValueError(f"La colonne '{column_name}' n'existe pas dans le DataFrame.")
-        # Vérifier que la colonne est quantitative
-        if not pd.api.types.is_numeric_dtype(data[column_name]):
-            raise ValueError(f"La colonne '{column_name}' n'est pas quantitative.")
-        columns_to_analyze = [column_name]
+        # Si une seule colonne est donnée, la convertir en liste
+        if isinstance(column_name, str):
+            column_name = [column_name]
+        # Vérifier que les colonnes sont présentes dans le DataFrame
+        missing_columns = [col for col in column_name if col not in data.columns]
+        if missing_columns:
+            raise ValueError(f"Les colonnes suivantes n'existent pas dans le DataFrame : {missing_columns}")
+        # Vérifier que toutes les colonnes sont quantitatives
+        non_numeric_columns = [col for col in column_name if not pd.api.types.is_numeric_dtype(data[col])]
+        if non_numeric_columns:
+            raise ValueError(f"Les colonnes suivantes ne sont pas quantitatives : {non_numeric_columns}")
+        columns_to_analyze = column_name
     else:
         # Sélectionner toutes les colonnes quantitatives
         columns_to_analyze = data.select_dtypes(include=[np.number]).columns
@@ -150,46 +205,48 @@ def detect_outliers(data, method="iqr", threshold=1.5, column_name=None):
 
     return outliers
 
-def detect_outliers_categorical(dataframe, threshold=0.01, columns=None):
+
+def replace_values_with_nan(df, replace_dict):
     """
-    Détecte les valeurs aberrantes dans les colonnes qualitatives 
-    en se basant sur la fréquence relative.
+    Remplace certaines valeurs spécifiées dans un dictionnaire par des NaN dans un DataFrame.
 
     Parameters:
-        dataframe (pd.DataFrame): Le DataFrame à analyser.
-        threshold (float): Seuil de fréquence relative en dessous duquel une catégorie
-                           est considérée comme un outlier (par défaut 0.01, soit 1%).
-        columns (list or str, optional): Liste des colonnes à analyser ou une seule colonne.
-                                         Si None, toutes les colonnes qualitatives sont analysées.
+    - df (pd.DataFrame): Le DataFrame à modifier.
+    - replace_dict (dict): Un dictionnaire où les clés sont les noms des colonnes 
+                           et les valeurs sont des listes de valeurs ou des scalaires
+                           à remplacer par NaN.
 
     Returns:
-        dict: Un dictionnaire contenant les valeurs aberrantes pour chaque colonne catégorique.
+    - pd.DataFrame: Le DataFrame avec les valeurs remplacées par NaN.
     """
-    # Déterminer les colonnes à analyser
-    if columns is None:
-        categorical_columns = dataframe.select_dtypes(include="object").columns
-    else:
-        if isinstance(columns, str):  # Si une seule colonne est spécifiée
-            columns = [columns]
-        categorical_columns = [col for col in columns if col in dataframe.select_dtypes(include="object").columns]
-        if not categorical_columns:
-            raise ValueError("Aucune colonne qualitative valide spécifiée.")
+    # Vérifier si le DataFrame est valide
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Le premier paramètre doit être un DataFrame pandas.")
+    
+    # Vérifier si le dictionnaire est valide
+    if not isinstance(replace_dict, dict):
+        raise ValueError("Le deuxième paramètre doit être un dictionnaire.")
+    
+    # Copie du DataFrame pour éviter de modifier l'original
+    df = df.copy()
 
-    outliers = {}
+    for column, values_to_replace in replace_dict.items():
+        # Vérifier si la colonne existe dans le DataFrame
+        if column in df.columns:
+            # Si values_to_replace est un scalaire, le convertir en liste
+            if not isinstance(values_to_replace, (list, np.ndarray)):
+                values_to_replace = [values_to_replace]
+            
+            # Remplacement direct avec pandas replace (supporte les listes)
+            df[column] = df[column].replace(values_to_replace, np.nan)
+        else:
+            print(f"Avertissement : La colonne '{column}' n'existe pas dans le DataFrame.")
+    
+    return df
 
-    for column in categorical_columns:
-        # Calculer les fréquences relatives pour chaque catégorie
-        freq = dataframe[column].value_counts(normalize=True)
-
-        # Identifier les catégories avec une fréquence inférieure au seuil
-        rare_categories = freq[freq < threshold].index.tolist()
-
-        # Ajouter au dictionnaire si des catégories rares sont trouvées
-        if rare_categories:
-            outliers[column] = rare_categories
-
-    return outliers
-
+# Liste des essences d'arbres présentes à Paris.
+# Cette liste contient les noms communs des différentes espèces d'arbres que l'on peut trouver dans la ville.
+# Ces essences peuvent être utilisées pour des analyses sur la biodiversité urbaine, l'entretien ou la gestion des espaces verts.
 essences_arbres_paris = ["Abelia", "Abricotier", "Ailante", "Alangium", "Alisier", "Althéa", "Amélanchier", "Arbre de Judée",
     "Arbre aux mouchoirs", "Arbre caramel", "Arbre à perruque", "Argousier", "Aubépine", "Aulne", "Baguenaudier",
     "Bambou", "Bananier", "Bouleau", "Buis", "Cèdre", "Cerisier", "Châtaignier", "Chêne", "Chicot du Canada",
@@ -201,6 +258,10 @@ essences_arbres_paris = ["Abelia", "Abricotier", "Ailante", "Alangium", "Alisier
     "Sumac", "Tamaris", "Tilleul", "Troène", "Tulipier", "Viorne", "Yuzu", "Zelkova"
 ]
 
+# Liste des genres botaniques d'arbres présents en France.
+# Contrairement à la liste précédente qui contient les noms communs, ici, les arbres sont regroupés par genres botaniques.
+# Cette classification est utile pour des analyses scientifiques et botaniques, permettant d'étudier les familles d'arbres 
+# et leur répartition dans le territoire français.
 genres_arbres_france = [
     "Acer", "Aesculus", "Alnus", "Betula", "Carpinus", "Castanea", "Cedrus", "Celtis", "Cercis", 
     "Corylus", "Cupressus", "Fagus", "Fraxinus", "Ginkgo", "Juglans", "Juniperus", "Larix", 
@@ -264,6 +325,9 @@ especes_arbres_france = [
     "Zelkova serrata"
 ]
 
+# Liste des espèces d'arbres présentes en France, classées par genre botanique.
+# Cette liste contient les noms scientifiques des espèces d'arbres, ce qui permet une classification plus précise
+# et standardisée, notamment pour des analyses scientifiques ou botaniques.
 varietes_arbres_france = [
     # Variétés de Platanus (Platanes)
     "x hispanica", "orientalis", "occidentalis",
@@ -459,12 +523,12 @@ def evaluate_outliers_with_criteria(data, outliers_dict=None, show_only_aberrant
         "genre": lambda x: x in genres_arbres_france,  # Genres connus
         "espece": lambda x: x in especes_arbres_france,  # Texte descriptif
         "variete": lambda x: x in varietes_arbres_france,  # Texte descriptif
-        "circonference_cm": lambda x: 10 <= x <= 3618,  # Entre 10 et 3618 cm
-        "hauteur_m": lambda x: 1 <= x <= 116,  # Entre 1 et 115,92 mètres
+        "circonference_cm": lambda x: 0 <= x <= 350,  # Entre 0 et 350 cm
+        "hauteur_m": lambda x: 0 <= x <= 40,  # Entre 1 et 115,92 mètres
         "stade_developpement": lambda x: x in ["A", "JA", "J", "M"],  # Stades connus
         "remarquable": lambda x: x in [True, False],  # Booléen
         "geo_point_2d_a": lambda x: 48.81 <= x <= 48.90,  # Latitude de Paris
-        "geo_point_2d_b": lambda x: 2.25 <= x <= 2.42,  # Longitude de Paris
+        "geo_point_2d_b": lambda x: 2.22 <= x <= 2.46,  # Longitude de Paris
     }
 
     # Résultat final
@@ -494,6 +558,23 @@ def evaluate_outliers_with_criteria(data, outliers_dict=None, show_only_aberrant
 
     return results
 
+def filter_rows_by_value(df, column_name):
+    """
+    Filtre les lignes d'un DataFrame où une colonne donnée a pour valeur 1 ou True.
+
+    Args:
+        df (pd.DataFrame): Le DataFrame à filtrer.
+        column_name (str): Le nom de la colonne à vérifier.
+
+    Returns:
+        pd.DataFrame: Un DataFrame contenant uniquement les lignes où la valeur est 1 ou True.
+    """
+    if column_name not in df.columns:
+        raise ValueError(f"La colonne '{column_name}' n'existe pas dans le DataFrame.")
+    
+    # Filtrer les lignes où la valeur est 1 ou True
+    filtered_df = df[df[column_name] == 1]
+    return filtered_df
 
 def check_unique_columns(dataframe, columns=None):
     """
@@ -523,143 +604,3 @@ def check_unique_columns(dataframe, columns=None):
             raise ValueError(f"La colonne '{column}' n'existe pas dans le DataFrame.")
     
     return uniqueness
-
-def remove_outliers(data, outliers_dict):
-    # Supprimer les lignes dont les valeurs sont identifiées comme outliers
-    for column, outliers in outliers_dict.items():
-        if outliers:  # Si des outliers existent dans cette colonne
-            data = data[~data[column].isin(outliers)]
-    return data
-
-def analyze_binary_variables(dataframe):
-    """
-    Analyse les variables binaires d'un DataFrame.
-
-    Parameters:
-        dataframe (pd.DataFrame): Le DataFrame à analyser.
-
-    Returns:
-        dict: Un dictionnaire contenant des informations sur les variables binaires.
-    """
-    binary_columns = {}
-    
-    for column in dataframe.columns:
-        # Identifier les colonnes contenant exactement deux valeurs uniques
-        unique_values = dataframe[column].dropna().unique()
-        if len(unique_values) == 2:
-            binary_columns[column] = {
-                "Unique Values": unique_values.tolist(),
-                "Value Counts": dataframe[column].value_counts().to_dict(),
-                "Percentage Distribution": (dataframe[column].value_counts(normalize=True) * 100).to_dict()
-            }
-    
-    # Affichage des résultats
-    if not binary_columns:
-        print("Aucune variable binaire détectée dans le DataFrame.")
-    else:
-        print(f"{len(binary_columns)} variables binaires détectées :")
-        for col, info in binary_columns.items():
-            print(f"\nVariable : {col}")
-            print(f"  - Valeurs uniques : {info['Unique Values']}")
-            print(f"  - Comptages : {info['Value Counts']}")
-            print(f"  - Distribution (%) : {info['Percentage Distribution']}")
-    
-    return binary_columns
-
-def controlled_outer_join(df1, df2, on=None, left_on=None, right_on=None, suffixes=("_left", "_right")):
-    """
-    Effectue une jointure OUTER entre deux DataFrames avec un contrôle des correspondances via '_merge'.
-    
-    Parameters:
-        df1 (pd.DataFrame): Le premier DataFrame.
-        df2 (pd.DataFrame): Le second DataFrame.
-        on (str or list of str, optional): Colonnes communes utilisées pour la jointure.
-        left_on (str or list of str, optional): Colonnes du DataFrame de gauche utilisées pour la jointure.
-        right_on (str or list of str, optional): Colonnes du DataFrame de droite utilisées pour la jointure.
-        suffixes (tuple of str, optional): Suffixes appliqués aux colonnes dupliquées des DataFrames.
-        
-    Returns:
-        pd.DataFrame: DataFrame résultant de la jointure avec une colonne '_merge' pour indiquer les correspondances.
-    """
-    # Effectuer la jointure OUTER avec indicator=True
-    merged_df = pd.merge(
-        df1, 
-        df2, 
-        how="outer", 
-        on=on, 
-        left_on=left_on, 
-        right_on=right_on, 
-        suffixes=suffixes, 
-        indicator=True
-    )
-
-    # Analyser les correspondances
-    merge_summary = merged_df["_merge"].value_counts()
-    print("Résumé des correspondances :")
-    print(merge_summary)
-    
-    return merged_df
-
-def count_nans(dataframe):
-    """
-    Affiche le nombre de valeurs manquantes (NaN, None, Null, vide) par colonne dans un DataFrame.
-
-    Parameters:
-        dataframe (pd.DataFrame): Le DataFrame à analyser.
-
-    Returns:
-        pd.Series: Une série contenant le nombre de valeurs manquantes par colonne.
-    """
-    # Remplacer les chaînes vides et les espaces uniquement par NaN
-    cleaned_df = dataframe.replace(r'^\s*$', pd.NA, regex=True)
-
-    # Compter les valeurs manquantes par colonne
-    nan_counts = cleaned_df.isna().sum()
-
-    print("Nombre de valeurs manquantes par colonne :")
-    print(nan_counts)
-    return nan_counts
-
-def average_percentage_per_column(df):
-    """
-    Affiche la moyenne en pourcentage par colonne d'un DataFrame.
-
-    Parameters:
-        df (pd.DataFrame): Le DataFrame à analyser.
-
-    Returns:
-        pd.Series: Une série contenant la moyenne en pourcentage par colonne.
-    """
-    # Calcul de la moyenne par colonne
-    column_means = df.mean(axis=0, numeric_only=True)
-    
-    # Calcul des pourcentages
-    percentage_means = (column_means / column_means.sum()) * 100
-
-    print("Moyenne en pourcentage par colonne :")
-    print(percentage_means)
-    return percentage_means
-
-def analyze_categorical_data(dataframe):
-    """
-    Analyse des variables catégorielles d'un DataFrame.
-
-    Parameters:
-        dataframe (pd.DataFrame): Le DataFrame contenant les données.
-
-    Returns:
-        dict: Un dictionnaire contenant pour chaque colonne catégorielle le pourcentage 
-              et les valeurs des occurrences.
-    """
-    results = {}
-    categorical_columns = dataframe.select_dtypes(include=['object', 'category']).columns
-
-    for column in categorical_columns:
-        counts = dataframe[column].value_counts()
-        percentages = dataframe[column].value_counts(normalize=True) * 100
-        results[column] = pd.DataFrame({
-            'Count': counts,
-            'Percentage': percentages
-        })
-
-    return results
